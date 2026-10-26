@@ -2,7 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
@@ -20,11 +20,24 @@ jobs:
         with:
           gradle-version: 8.9
 
+      - name: Find project folder
+        id: find
+        run: |
+          f=$(find . -name settings.gradle.kts -not -path '*/.git/*' | head -n 1)
+          if [ -z "$f" ]; then
+            echo "settings.gradle.kts tidak ditemukan. Isi repo:"
+            find . -maxdepth 3 -not -path './.git/*'
+            exit 1
+          fi
+          dir=$(dirname "$f")
+          echo "Project ada di: $dir"
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
+
       - name: Build debug APK
+        working-directory: ${{ steps.find.outputs.dir }}
         run: gradle assembleDebug --no-daemon
 
       - uses: actions/upload-artifact@v4
         with:
           name: KAKORO-INJECTOR-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
-          
+          path: ${{ steps.find.outputs.dir }}/app/build/outputs/apk/debug/*.apk
